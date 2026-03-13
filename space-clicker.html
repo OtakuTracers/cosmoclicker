@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COSMOCLICKER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600&display=swap');
+
+  :root {
+    --star-gold: #FFD700;
+    --nebula-blue: #4FC3F7;
+    --plasma-purple: #CE93D8;
+    --void-dark: #02040A;
+    --panel-bg: rgba(5, 15, 35, 0.85);
+    --border-glow: rgba(79, 195, 247, 0.3);
+    --text-dim: #8899BB;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--void-dark);
+    font-family: 'Exo 2', sans-serif;
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── STARFIELD ── */
+  #stars-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* ── NEBULA BG ── */
+  .nebula-bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 30%, rgba(100,60,180,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 80% 70%, rgba(20,100,180,0.15) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% 90%, rgba(180,40,80,0.08) 0%, transparent 70%);
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--border-glow);
+    background: rgba(2,4,10,0.7);
+    backdrop-filter: blur(10px);
+    flex-shrink: 0;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    background: linear-gradient(90deg, #fff 0%, var(--nebula-blue) 50%, var(--plasma-purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+  }
+
+  .stat-item {
+    text-align: center;
+  }
+
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--star-gold);
+    text-shadow: 0 0 12px rgba(255,215,0,0.6);
+  }
+
+  .rebirth-badge {
+    background: linear-gradient(135deg, #7B1FA2, #311B92);
+    border: 1px solid #CE93D8;
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: #CE93D8;
+    box-shadow: 0 0 16px rgba(206,147,216,0.4);
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main-layout {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── LEFT PANEL: UPGRADES ── */
+  .left-panel {
+    width: 230px;
+    flex-shrink: 0;
+    background: var(--panel-bg);
+    border-right: 1px solid var(--border-glow);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--nebula-blue);
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid var(--border-glow);
+    text-transform: uppercase;
+  }
+
+  .upgrades-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .upgrades-list::-webkit-scrollbar { width: 4px; }
+  .upgrades-list::-webkit-scrollbar-track { background: transparent; }
+  .upgrades-list::-webkit-scrollbar-thumb { background: var(--border-glow); border-radius: 2px; }
+
+  .upgrade-card {
+    border: 1px solid rgba(79,195,247,0.15);
+    border-radius: 8px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    background: rgba(10,25,60,0.5);
+  }
+
+  .upgrade-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 0%, rgba(79,195,247,0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .upgrade-card:hover::before { opacity: 1; }
+  .upgrade-card:hover {
+    border-color: rgba(79,195,247,0.5);
+    transform: translateX(2px);
+    box-shadow: 0 0 16px rgba(79,195,247,0.15);
+  }
+
+  .upgrade-card.affordable {
+    border-color: rgba(255,215,0,0.3);
+    box-shadow: 0 0 8px rgba(255,215,0,0.1);
+  }
+
+  .upgrade-card.affordable:hover {
+    border-color: rgba(255,215,0,0.7);
+    box-shadow: 0 0 20px rgba(255,215,0,0.25);
+  }
+
+  .upgrade-card.owned {
+    opacity: 0.45;
+    border-color: rgba(255,255,255,0.05);
+    cursor: default;
+    transform: none !important;
+  }
+
+  .upgrade-card.locked {
+    opacity: 0.2;
+    cursor: not-allowed;
+  }
+
+  .upgrade-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .upgrade-icon { font-size: 20px; }
+
+  .upgrade-name {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: #fff;
+    flex: 1;
+  }
+
+  .upgrade-count {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--star-gold);
+    background: rgba(255,215,0,0.1);
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+
+  .upgrade-cost {
+    font-size: 10px;
+    color: var(--star-gold);
+    font-weight: 600;
+  }
+
+  .upgrade-desc {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    line-height: 1.4;
+  }
+
+  /* ── CENTER: SOLAR SYSTEM ── */
+  .center-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #solar-canvas {
+    position: absolute;
+    inset: 0;
+    cursor: crosshair;
+  }
+
+  .click-hint {
+    position: absolute;
+    bottom: 24px;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    animation: pulse-hint 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-hint {
+    0%,100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .system-label {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .system-label span {
+    color: var(--nebula-blue);
+    display: block;
+    font-size: 15px;
+    letter-spacing: 5px;
+    color: #fff;
+    text-shadow: 0 0 20px var(--nebula-blue);
+  }
+
+  /* ── RIGHT PANEL: STATS / MILESTONES ── */
+  .right-panel {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--panel-bg);
+    border-left: 1px solid var(--border-glow);
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .milestones-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .milestone-card {
+    border: 1px solid rgba(79,195,247,0.1);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: rgba(10,25,60,0.4);
+    transition: all 0.3s;
+  }
+
+  .milestone-card.achieved {
+    border-color: rgba(255,215,0,0.4);
+    background: rgba(255,215,0,0.05);
+  }
+
+  .milestone-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+
+  .milestone-icon { font-size: 14px; }
+
+  .milestone-name {
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #aabbdd;
+    flex: 1;
+    text-transform: uppercase;
+  }
+
+  .milestone-card.achieved .milestone-name { color: var(--star-gold); }
+
+  .milestone-desc {
+    font-size: 8px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  .milestone-progress {
+    margin-top: 5px;
+    height: 3px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .milestone-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--nebula-blue), var(--plasma-purple));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  /* ── REBIRTH PANEL ── */
+  .rebirth-panel {
+    margin: 8px;
+    border: 1px solid rgba(206,147,216,0.3);
+    border-radius: 10px;
+    padding: 12px;
+    background: rgba(80,0,120,0.2);
+    text-align: center;
+  }
+
+  .rebirth-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--plasma-purple);
+    margin-bottom: 6px;
+  }
+
+  .rebirth-btn {
+    width: 100%;
+    padding: 8px;
+    background: linear-gradient(135deg, #7B1FA2, #4A148C);
+    border: 1px solid var(--plasma-purple);
+    border-radius: 6px;
+    color: #fff;
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+    opacity: 0.4;
+  }
+
+  .rebirth-btn.ready {
+    opacity: 1;
+    box-shadow: 0 0 20px rgba(206,147,216,0.5);
+    animation: rebirth-pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes rebirth-pulse {
+    0%,100% { box-shadow: 0 0 20px rgba(206,147,216,0.4); }
+    50% { box-shadow: 0 0 35px rgba(206,147,216,0.8); }
+  }
+
+  .rebirth-btn.ready:hover {
+    background: linear-gradient(135deg, #9C27B0, #6A1B9A);
+    transform: scale(1.02);
+  }
+
+  .rebirth-desc {
+    font-size: 8px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+
+  /* ── FLOATING CLICK PARTICLES ── */
+  .click-particle {
+    position: fixed;
+    font-family: 'Orbitron', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--star-gold);
+    text-shadow: 0 0 8px rgba(255,215,0,0.8);
+    pointer-events: none;
+    z-index: 100;
+    animation: float-up 1s ease-out forwards;
+  }
+
+  @keyframes float-up {
+    0% { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-60px) scale(0.7); }
+  }
+
+  /* ── CPS BAR ── */
+  .cps-bar {
+    position: absolute;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    color: var(--nebula-blue);
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px rgba(79,195,247,0.6);
+  }
+
+  /* Notification toast */
+  .toast {
+    position: fixed;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px);
+    background: rgba(10,30,60,0.95);
+    border: 1px solid var(--nebula-blue);
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #fff;
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.4s;
+    white-space: nowrap;
+    box-shadow: 0 0 30px rgba(79,195,247,0.3);
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars-canvas"></canvas>
+<div class="nebula-bg"></div>
+
+<header>
+  <div class="logo">COSMOCLICKER</div>
+  <div class="header-stats">
+    <div class="stat-item">
+      <div class="stat-label">Stardust</div>
+      <div class="stat-value" id="currency-display">0</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Total Earned</div>
+      <div class="stat-value" id="total-display">0</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-label">Per Second</div>
+      <div class="stat-value" id="cps-display">0</div>
+    </div>
+  </div>
+  <div class="rebirth-badge" id="rebirth-badge">✦ UNIVERSE #1</div>
+</header>
+
+<div class="main-layout">
+
+  <!-- LEFT: UPGRADES -->
+  <div class="left-panel">
+    <div class="panel-title">⚡ Upgrades</div>
+    <div class="upgrades-list" id="upgrades-list"></div>
+  </div>
+
+  <!-- CENTER: SOLAR SYSTEM -->
+  <div class="center-area">
+    <div class="system-label">
+      SOLAR SYSTEM<span id="system-name">SOL — MILKY WAY</span>
+    </div>
+    <canvas id="solar-canvas"></canvas>
+    <div class="cps-bar" id="cps-bar">0 STARDUST / SEC</div>
+    <div class="click-hint">▼ Click the Sun to harvest Stardust ▼</div>
+  </div>
+
+  <!-- RIGHT: MILESTONES -->
+  <div class="right-panel">
+    <div class="panel-title">🏆 Milestones</div>
+    <div class="milestones-list" id="milestones-list"></div>
+    <div class="rebirth-panel">
+      <div class="rebirth-title">✦ REBIRTH SYSTEM ✦</div>
+      <button class="rebirth-btn" id="rebirth-btn">TRANSCEND GALAXY</button>
+      <div class="rebirth-desc" id="rebirth-desc">Unlock all 8 planets to transcend to a new star system and earn permanent bonuses.</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════
+const state = {
+  currency: 0,
+  totalEarned: 0,
+  cps: 0,
+  rebirths: 0,
+  rebirthMultiplier: 1,
+  unlockedPlanets: 0, // 0=sun only, 1=Mercury...8=Neptune
+  lastTick: Date.now(),
+  clickPower: 1,
+  upgrades: {},
+  systemNames: [
+    "SOL — MILKY WAY",
+    "ALPHA CENTAURI — CENTAURUS",
+    "TAU CETI — CETUS",
+    "KEPLER-22 — CYGNUS",
+    "TRAPPIST-1 — AQUARIUS",
+    "PROXIMA — CENTAURUS",
+    "GLIESE 667 — SCORPIUS",
+    "HD 40307 — PICTOR",
+    "WOLF 1061 — OPHIUCHUS",
+    "ROSS 128 — VIRGO",
+  ]
+};
+
+// ═══════════════════════════════
+//  PLANET DATA
+// ═══════════════════════════════
+const PLANETS = [
+  { name: "Mercury", emoji: "🪨", color: "#9E9E9E", size: 6,  orbitR: 80,  speed: 0.035, cps: 2,   cost: 100,    desc: "Tiny & swift. +2 CPS" },
+  { name: "Venus",   emoji: "🌕", color: "#FFCA28", size: 10, orbitR: 120, speed: 0.022, cps: 8,   cost: 400,    desc: "Cloudy giant. +8 CPS" },
+  { name: "Earth",   emoji: "🌍", color: "#42A5F5", size: 11, orbitR: 165, speed: 0.016, cps: 20,  cost: 1200,   desc: "Home world. +20 CPS" },
+  { name: "Mars",    emoji: "🔴", color: "#EF5350", size: 8,  orbitR: 210, speed: 0.012, cps: 45,  cost: 3500,   desc: "The red planet. +45 CPS" },
+  { name: "Jupiter", emoji: "🟠", color: "#FF8F00", size: 22, orbitR: 265, speed: 0.007, cps: 150, cost: 12000,  desc: "Gas titan. +150 CPS" },
+  { name: "Saturn",  emoji: "🪐", color: "#FDD835", size: 19, orbitR: 320, speed: 0.005, cps: 400, cost: 40000,  desc: "Ring lord. +400 CPS" },
+  { name: "Uranus",  emoji: "🔵", color: "#4DD0E1", size: 15, orbitR: 375, speed: 0.003, cps: 900, cost: 130000, desc: "Ice giant. +900 CPS" },
+  { name: "Neptune", emoji: "💙", color: "#5C6BC0", size: 14, orbitR: 420, speed: 0.002, cps: 2500,cost: 450000, desc: "Outer world. +2500 CPS" },
+];
+
+const UPGRADES = [
+  { id: "solar_flare",   name: "Solar Flares",    icon: "☀️", cost: 50,     multiplier: 2,   type: "click", desc: "Double click power" },
+  { id: "gravity_well",  name: "Gravity Well",    icon: "🌀", cost: 500,    multiplier: 2,   type: "cps",   desc: "Double all CPS" },
+  { id: "dark_matter",   name: "Dark Matter",     icon: "⬛", cost: 2000,   multiplier: 3,   type: "click", desc: "Triple click power" },
+  { id: "pulsar_beam",   name: "Pulsar Beam",     icon: "💫", cost: 8000,   multiplier: 2,   type: "cps",   desc: "Double all CPS again" },
+  { id: "wormhole",      name: "Wormhole",        icon: "🕳️", cost: 30000,  multiplier: 5,   type: "click", desc: "5x click power" },
+  { id: "quantum_flux",  name: "Quantum Flux",    icon: "⚛️", cost: 100000, multiplier: 3,   type: "cps",   desc: "Triple all CPS" },
+  { id: "singularity",   name: "Singularity",     icon: "🌌", cost: 500000, multiplier: 10,  type: "cps",   desc: "10x all CPS!" },
+];
+
+const MILESTONES = [
+  { id: "first_click",   name: "First Light",      icon: "✨", desc: "Click the sun for the first time",  check: () => state.totalEarned >= 1 },
+  { id: "mercury",       name: "Messenger",         icon: "💨", desc: "Unlock Mercury",                    check: () => state.unlockedPlanets >= 1 },
+  { id: "earth",         name: "Homebound",         icon: "🌍", desc: "Unlock Earth",                      check: () => state.unlockedPlanets >= 3 },
+  { id: "jupiter",       name: "Gas Giant",         icon: "🪐", desc: "Unlock Jupiter",                    check: () => state.unlockedPlanets >= 5 },
+  { id: "full_system",   name: "Full System",       icon: "🌟", desc: "Unlock all 8 planets",              check: () => state.unlockedPlanets >= 8 },
+  { id: "rebirth1",      name: "New Frontier",      icon: "🚀", desc: "Complete your first rebirth",       check: () => state.rebirths >= 1 },
+  { id: "rebirth3",      name: "Galaxy Hopper",     icon: "🌌", desc: "Rebirth 3 times",                   check: () => state.rebirths >= 3 },
+  { id: "millionaire",   name: "Stardust Rich",     icon: "💰", desc: "Earn 1,000,000 stardust total",    check: () => state.totalEarned >= 1000000 },
+];
+
+// ═══════════════════════════════
+//  STARFIELD CANVAS
+// ═══════════════════════════════
+const starsCanvas = document.getElementById('stars-canvas');
+const sCtx = starsCanvas.getContext('2d');
+let stars = [];
+
+function initStars() {
+  starsCanvas.width = window.innerWidth;
+  starsCanvas.height = window.innerHeight;
+  stars = [];
+  for (let i = 0; i < 250; i++) {
+    stars.push({
+      x: Math.random() * starsCanvas.width,
+      y: Math.random() * starsCanvas.height,
+      r: Math.random() * 1.5 + 0.2,
+      alpha: Math.random(),
+      speed: Math.random() * 0.005 + 0.002,
+      phase: Math.random() * Math.PI * 2
+    });
+  }
+}
+
+function drawStars(t) {
+  sCtx.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
+  for (const s of stars) {
+    const a = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(t * s.speed + s.phase));
+    sCtx.beginPath();
+    sCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    sCtx.fillStyle = `rgba(255,255,255,${a})`;
+    sCtx.fill();
+  }
+}
+
+// ═══════════════════════════════
+//  SOLAR SYSTEM CANVAS
+// ═══════════════════════════════
+const solarCanvas = document.getElementById('solar-canvas');
+const ctx = solarCanvas.getContext('2d');
+let planetAngles = PLANETS.map(() => Math.random() * Math.PI * 2);
+let sunPulse = 0;
+let sunClickEffect = 0;
+let ripples = [];
+let orbitParticles = [];
+
+function resizeSolar() {
+  const area = solarCanvas.parentElement;
+  solarCanvas.width = area.clientWidth;
+  solarCanvas.height = area.clientHeight;
+}
+
+function getCX() { return solarCanvas.width / 2; }
+function getCY() { return solarCanvas.height / 2; }
+
+function drawSun(t) {
+  const cx = getCX(), cy = getCY();
+  sunPulse = Math.sin(t * 0.002) * 0.08 + 1;
+  const clickBump = sunClickEffect > 0 ? sunClickEffect * 8 : 0;
+  sunClickEffect = Math.max(0, sunClickEffect - 0.05);
+
+  const r = (22 + clickBump) * sunPulse;
+
+  // Outer glow layers
+  for (let i = 4; i >= 1; i--) {
+    const gr = ctx.createRadialGradient(cx, cy, r*0.5, cx, cy, r * (1 + i * 0.6));
+    gr.addColorStop(0, `rgba(255,${180+i*10},0,${0.06/i})`);
+    gr.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(cx, cy, r * (1 + i * 0.6), 0, Math.PI * 2);
+    ctx.fillStyle = gr;
+    ctx.fill();
+  }
+
+  // Corona
+  const corona = ctx.createRadialGradient(cx, cy, r * 0.7, cx, cy, r * 1.8);
+  corona.addColorStop(0, 'rgba(255,180,0,0.25)');
+  corona.addColorStop(0.5, 'rgba(255,100,0,0.08)');
+  corona.addColorStop(1, 'transparent');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
+  ctx.fillStyle = corona;
+  ctx.fill();
+
+  // Sun body
+  const bodyGrad = ctx.createRadialGradient(cx - r*0.2, cy - r*0.2, 0, cx, cy, r);
+  bodyGrad.addColorStop(0, '#FFF9C4');
+  bodyGrad.addColorStop(0.3, '#FFCA28');
+  bodyGrad.addColorStop(0.7, '#FF8F00');
+  bodyGrad.addColorStop(1, '#E65100');
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+}
+
+function drawOrbit(r, alpha = 0.12) {
+  const cx = getCX(), cy = getCY();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(79,195,247,${alpha})`;
+  ctx.lineWidth = 0.5;
+  ctx.setLineDash([3, 8]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+function drawPlanet(planet, angle, idx) {
+  const cx = getCX(), cy = getCY();
+  const scale = Math.min(solarCanvas.width, solarCanvas.height) / 900;
+  const orbitR = planet.orbitR * Math.min(scale, 1) * Math.max(scale, 0.6);
+  const px = cx + Math.cos(angle) * orbitR;
+  const py = cy + Math.sin(angle) * orbitR;
+  const r = planet.size;
+
+  // Planet glow
+  const glow = ctx.createRadialGradient(px, py, 0, px, py, r * 2.5);
+  glow.addColorStop(0, planet.color + '44');
+  glow.addColorStop(1, 'transparent');
+  ctx.beginPath();
+  ctx.arc(px, py, r * 2.5, 0, Math.PI * 2);
+  ctx.fillStyle = glow;
+  ctx.fill();
+
+  // Planet body
+  const grad = ctx.createRadialGradient(px - r*0.3, py - r*0.3, 0, px, py, r);
+  grad.addColorStop(0, '#ffffff55');
+  grad.addColorStop(0.4, planet.color);
+  grad.addColorStop(1, planet.color + '88');
+  ctx.beginPath();
+  ctx.arc(px, py, r, 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Saturn rings
+  if (planet.name === "Saturn") {
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(0.4);
+    ctx.scale(1, 0.3);
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 2, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(253,216,53,0.55)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Planet label (hover would be nice but canvas… keep it simple)
+  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.font = `7px "Exo 2"`;
+  ctx.textAlign = 'center';
+  ctx.fillText(planet.name, px, py + r + 9);
+}
+
+function drawRipples() {
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const rip = ripples[i];
+    ctx.beginPath();
+    ctx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,215,0,${rip.alpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    rip.r += 3;
+    rip.alpha -= 0.025;
+    if (rip.alpha <= 0) ripples.splice(i, 1);
+  }
+}
+
+function drawSolar(t) {
+  ctx.clearRect(0, 0, solarCanvas.width, solarCanvas.height);
+  const scale = Math.min(solarCanvas.width, solarCanvas.height) / 900;
+  const s = Math.min(scale, 1) * Math.max(scale, 0.6);
+
+  // Draw orbits for unlocked planets
+  for (let i = 0; i < state.unlockedPlanets; i++) {
+    drawOrbit(PLANETS[i].orbitR * s);
+  }
+
+  // Draw ripples
+  drawRipples();
+
+  // Draw sun
+  drawSun(t);
+
+  // Draw planets
+  for (let i = 0; i < state.unlockedPlanets; i++) {
+    planetAngles[i] += PLANETS[i].speed * (state.rebirthMultiplier > 1 ? 1.2 : 1);
+    drawPlanet(PLANETS[i], planetAngles[i], i);
+  }
+
+  // Next planet preview (faded)
+  if (state.unlockedPlanets < PLANETS.length) {
+    const next = PLANETS[state.unlockedPlanets];
+    const orbitR = next.orbitR * s;
+    ctx.beginPath();
+    ctx.arc(getCX(), getCY(), orbitR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(79,195,247,0.04)';
+    ctx.lineWidth = 0.5;
+    ctx.setLineDash([2, 12]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ═══════════════════════════════
+//  SUN CLICK DETECTION
+// ═══════════════════════════════
+solarCanvas.addEventListener('click', (e) => {
+  const rect = solarCanvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const cx = getCX(), cy = getCY();
+  const dist = Math.sqrt((mx - cx)**2 + (my - cy)**2);
+  const sunR = 22 + 8;
+
+  if (dist < sunR * 2.5) {
+    // Big click on sun
+    const earned = state.clickPower * state.rebirthMultiplier;
+    state.currency += earned;
+    state.totalEarned += earned;
+    sunClickEffect = 1;
+    ripples.push({ x: cx, y: cy, r: sunR, alpha: 0.6 });
+
+    // Floating text
+    spawnFloatText(e.clientX, e.clientY, `+${formatNum(earned)}`);
+    updateUI();
+  }
+});
+
+// ═══════════════════════════════
+//  UI HELPERS
+// ═══════════════════════════════
+function formatNum(n) {
+  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return Math.floor(n).toString();
+}
+
+function spawnFloatText(x, y, text) {
+  const el = document.createElement('div');
+  el.className = 'click-particle';
+  el.style.left = x + 'px';
+  el.style.top = y + 'px';
+  el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 1000);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ═══════════════════════════════
+//  RENDER UPGRADE CARDS
+// ═══════════════════════════════
+function renderUpgrades() {
+  const list = document.getElementById('upgrades-list');
+  list.innerHTML = '';
+
+  // Planet unlocks first
+  PLANETS.forEach((planet, i) => {
+    const owned = i < state.unlockedPlanets;
+    const locked = i > state.unlockedPlanets;
+    const affordable = !owned && !locked && state.currency >= planet.cost;
+
+    const card = document.createElement('div');
+    card.className = 'upgrade-card' + (owned ? ' owned' : '') + (locked ? ' locked' : '') + (affordable ? ' affordable' : '');
+
+    card.innerHTML = `
+      <div class="upgrade-header">
+        <div class="upgrade-icon">${planet.emoji}</div>
+        <div class="upgrade-name">${planet.name}</div>
+        ${owned ? '<div class="upgrade-count">✓</div>' : ''}
+      </div>
+      <div class="upgrade-cost">${owned ? 'Unlocked' : '⭐ ' + formatNum(planet.cost)}</div>
+      <div class="upgrade-desc">${planet.desc}</div>
+    `;
+
+    if (!owned && !locked) {
+      card.addEventListener('click', () => {
+        if (state.currency >= planet.cost) {
+          state.currency -= planet.cost;
+          state.unlockedPlanets = i + 1;
+          recalcCPS();
+          renderUpgrades();
+          renderMilestones();
+          showToast(`🪐 ${planet.name} added to your solar system!`);
+          updateUI();
+        }
+      });
+    }
+
+    list.appendChild(card);
+  });
+
+  // Separator
+  const sep = document.createElement('div');
+  sep.style.cssText = 'border-top:1px solid rgba(79,195,247,0.1);margin:4px 0;padding-top:4px;font-size:8px;color:#556688;letter-spacing:2px;text-align:center;';
+  sep.textContent = '— PASSIVE UPGRADES —';
+  list.appendChild(sep);
+
+  // Passive upgrades
+  UPGRADES.forEach(upg => {
+    const owned = !!state.upgrades[upg.id];
+    const affordable = !owned && state.currency >= upg.cost;
+    const card = document.createElement('div');
+    card.className = 'upgrade-card' + (owned ? ' owned' : '') + (affordable ? ' affordable' : '');
+    card.innerHTML = `
+      <div class="upgrade-header">
+        <div class="upgrade-icon">${upg.icon}</div>
+        <div class="upgrade-name">${upg.name}</div>
+        ${owned ? '<div class="upgrade-count">✓</div>' : ''}
+      </div>
+      <div class="upgrade-cost">${owned ? 'Purchased' : '⭐ ' + formatNum(upg.cost)}</div>
+      <div class="upgrade-desc">${upg.desc}</div>
+    `;
+    if (!owned) {
+      card.addEventListener('click', () => {
+        if (state.currency >= upg.cost) {
+          state.currency -= upg.cost;
+          state.upgrades[upg.id] = true;
+          if (upg.type === 'click') state.clickPower *= upg.multiplier;
+          recalcCPS();
+          renderUpgrades();
+          showToast(`⚡ ${upg.name} activated!`);
+          updateUI();
+        }
+      });
+    }
+    list.appendChild(card);
+  });
+}
+
+function recalcCPS() {
+  let base = 0;
+  for (let i = 0; i < state.unlockedPlanets; i++) base += PLANETS[i].cps;
+  let mult = state.rebirthMultiplier;
+  Object.keys(state.upgrades).forEach(id => {
+    const upg = UPGRADES.find(u => u.id === id);
+    if (upg && upg.type === 'cps') mult *= upg.multiplier;
+  });
+  state.cps = base * mult;
+}
+
+// ═══════════════════════════════
+//  RENDER MILESTONES
+// ═══════════════════════════════
+function renderMilestones() {
+  const list = document.getElementById('milestones-list');
+  list.innerHTML = '';
+  MILESTONES.forEach(m => {
+    const achieved = m.check();
+    const card = document.createElement('div');
+    card.className = 'milestone-card' + (achieved ? ' achieved' : '');
+    card.innerHTML = `
+      <div class="milestone-header">
+        <div class="milestone-icon">${m.icon}</div>
+        <div class="milestone-name">${m.name}</div>
+      </div>
+      <div class="milestone-desc">${m.desc}</div>
+    `;
+    list.appendChild(card);
+  });
+
+  // Rebirth button state
+  const allPlanets = state.unlockedPlanets >= 8;
+  const btn = document.getElementById('rebirth-btn');
+  btn.classList.toggle('ready', allPlanets);
+  document.getElementById('rebirth-desc').textContent = allPlanets
+    ? `✦ You've mastered the solar system! Transcend for a ${Math.floor((state.rebirths + 1) * 25 + 25)}% permanent bonus.`
+    : `Unlock all 8 planets to transcend. (${state.unlockedPlanets}/8 planets)`;
+}
+
+// ═══════════════════════════════
+//  REBIRTH
+// ═══════════════════════════════
+document.getElementById('rebirth-btn').addEventListener('click', () => {
+  if (state.unlockedPlanets < 8) return;
+  state.rebirths++;
+  state.rebirthMultiplier = 1 + state.rebirths * 0.5;
+  state.currency = 0;
+  state.unlockedPlanets = 0;
+  state.upgrades = {};
+  state.clickPower = 1;
+  recalcCPS();
+
+  const systemName = state.systemNames[Math.min(state.rebirths, state.systemNames.length - 1)];
+  document.getElementById('system-name').textContent = systemName;
+  document.getElementById('rebirth-badge').textContent = `✦ UNIVERSE #${state.rebirths + 1}`;
+
+  showToast(`🌌 Welcome to ${systemName}! ${Math.floor(state.rebirthMultiplier * 100)}% bonus active!`);
+  renderUpgrades();
+  renderMilestones();
+  updateUI();
+});
+
+// ═══════════════════════════════
+//  UPDATE UI
+// ═══════════════════════════════
+function updateUI() {
+  document.getElementById('currency-display').textContent = formatNum(state.currency);
+  document.getElementById('total-display').textContent = formatNum(state.totalEarned);
+  document.getElementById('cps-display').textContent = formatNum(state.cps);
+  document.getElementById('cps-bar').textContent = `${formatNum(state.cps)} STARDUST / SEC`;
+  renderMilestones();
+}
+
+// ═══════════════════════════════
+//  GAME TICK (CPS)
+// ═══════════════════════════════
+function gameTick() {
+  const now = Date.now();
+  const dt = (now - state.lastTick) / 1000;
+  state.lastTick = now;
+  if (state.cps > 0) {
+    const earned = state.cps * dt;
+    state.currency += earned;
+    state.totalEarned += earned;
+  }
+  updateUI();
+}
+
+// ═══════════════════════════════
+//  MAIN LOOP
+// ═══════════════════════════════
+let animT = 0;
+function loop(ts) {
+  animT = ts || 0;
+  drawStars(animT);
+  drawSolar(animT);
+  requestAnimationFrame(loop);
+}
+
+// ═══════════════════════════════
+//  INIT
+// ═══════════════════════════════
+window.addEventListener('resize', () => {
+  initStars();
+  resizeSolar();
+});
+
+initStars();
+resizeSolar();
+renderUpgrades();
+renderMilestones();
+updateUI();
+setInterval(gameTick, 50);
+loop();
+</script>
+</body>
+</html>
